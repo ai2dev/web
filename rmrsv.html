@@ -46,8 +46,8 @@
             <h3>새 예약 신청</h3>
             <form id="reservationForm">
                 <label>날짜: <input type="date" id="dateInput" required /></label>
-                <label>시작시간: <input type="time" id="startTimeInput" required /></label>
-                <label>종료시간: <input type="time" id="endTimeInput" required /></label>
+                <label>시작시간: <input type="time" id="startTimeInput" required step="1800" value="13:00" /></label>
+                <label>종료시간: <input type="time" id="endTimeInput" required step="1800" value="13:30" /></label>
                 <label>예약자명: <input type="text" id="nameInput" required /></label>
                 <label>목적: <input type="text" id="purposeInput" required /></label>
                 <label>방 선택: <select id="roomSelect" required>
