@@ -5,22 +5,52 @@
 // status: 'pending' (신청), 'approved', 'rejected'
 
 // 초기 데이터 로드 및 현재 달 표시
-const STORAGE_KEY = window.location.origin + '_roomReservations'; // 도메인 기반 키, GitHub Pages 등 동일 도메인에서 공유
 const ADMIN_PASSWORD = 'adm1960';
 let isAdmin = false;
+
+// -------------------------------------------------
+//  Vercel API 래퍼 (GitHub 토큰은 서버리스 함수가 관리)
+// -------------------------------------------------
+/**
+ * Vercel 서버리스 함수에서 reservations.json 을 읽어 옵니다.
+ * GET /api/reservations → [{...}, ...]
+ */
+async function apiFetchReservations() {
+  const resp = await fetch('/api/reservations');
+  if (!resp.ok) throw new Error('예약 목록 로드 실패');
+  return await resp.json(); // 이미 파싱된 배열
+}
+
+/**
+ * Vercel 서버리스 함수에 전체 예약 배열을 저장합니다.
+ * POST /api/reservations { reservations: [...] }
+ */
+async function apiSaveReservations(reservations) {
+  const resp = await fetch('/api/reservations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reservations),
+  });
+  if (!resp.ok) throw new Error('예약 저장 실패');
+  return await resp.json(); // 커밋 결과 (필요 시 사용)
+}
+
 
 // UUID 생성 (간단 버전)
 function generateId() {
   return '_' + Math.random().toString(36).substr(2, 9);
 }
 
-function loadReservations() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+// ghFetch removed – client now uses Vercel API proxy (see apiFetchReservations / apiSaveReservations above)
+
+async function loadReservations() {
+  // Vercel 함수가 GitHub 파일을 반환합니다.
+  return await apiFetchReservations();
 }
 
-function saveReservations(reservations) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations));
+async function saveReservations(reservations) {
+  // 전체 배열을 Vercel 함수에 POST 합니다.
+  await apiSaveReservations(reservations);
 }
 
 function formatDate(dateStr) {
@@ -28,8 +58,8 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('ko-KR');
 }
 
-function renderTable() {
-  const reservations = loadReservations();
+async function renderTable() {
+  const reservations = await loadReservations();
   const tbody = document.getElementById('reservationBody');
   tbody.innerHTML = '';
   const now = new Date();
@@ -81,7 +111,7 @@ function closeModal() {
   document.getElementById('reservationForm').reset();
 }
 
-function addReservation(event) {
+async function addReservation(event) {
   event.preventDefault();
   const date = document.getElementById('dateInput').value;
   const startTime = document.getElementById('startTimeInput').value;
@@ -99,10 +129,10 @@ function addReservation(event) {
     room,
     status: 'pending'
   };
-  const reservations = loadReservations();
+  const reservations = await loadReservations();
   reservations.push(newRes);
-  saveReservations(reservations);
-  renderTable();
+  await saveReservations(reservations);
+  await renderTable();
   closeModal();
 }
 
@@ -125,26 +155,26 @@ function toggleAdminMode() {
   }
 }
 
-function handleApprove(event) {
+async function handleApprove(event) {
   const id = event.target.dataset.id;
-  const reservations = loadReservations();
+  const reservations = await loadReservations();
   const res = reservations.find(r => r.id === id);
   if (res) { res.status = 'approved'; }
-  saveReservations(reservations);
-  renderTable();
+  await saveReservations(reservations);
+  await renderTable();
 }
-function handleDelete(event) {
+async function handleDelete(event) {
   const id = event.target.dataset.id;
-  let reservations = loadReservations();
+  let reservations = await loadReservations();
   reservations = reservations.filter(r => r.id !== id);
-  saveReservations(reservations);
-  renderTable();
+  await saveReservations(reservations);
+  await renderTable();
 }
 
 // 이벤트 바인딩
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   updateMonthTitle();
-  renderTable();
+  await renderTable();
   document.getElementById('addReservationBtn').addEventListener('click', openModal);
   document.getElementById('closeModal').addEventListener('click', closeModal);
   document.getElementById('reservationForm').addEventListener('submit', addReservation);
