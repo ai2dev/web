@@ -16,7 +16,8 @@ let isAdmin = false;
  * GET /api/reservations → [{...}, ...]
  */
 async function apiFetchReservations() {
-  const resp = await fetch('/api/reservations');
+  const baseUrl = `${window.location.origin}`;
+  const resp = await fetch(`${baseUrl}/api/reservations`);
   if (!resp.ok) throw new Error('예약 목록 로드 실패');
   return await resp.json(); // 이미 파싱된 배열
 }
@@ -26,7 +27,11 @@ async function apiFetchReservations() {
  * POST /api/reservations { reservations: [...] }
  */
 async function apiSaveReservations(reservations) {
-  const resp = await fetch('/api/reservations', {
+  const resp = await fetch(`${window.location.origin}/api/reservations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reservations),
+  });
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(reservations),
