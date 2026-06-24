@@ -26,7 +26,7 @@ async function ghRequest(path, options = {}) {
   return resp.json();
 }
 
-
+module.exports = async (req, res) => {
   try {
     // CORS preflight handling
     if (req.method === 'OPTIONS') {
@@ -36,6 +36,7 @@ async function ghRequest(path, options = {}) {
       res.status(200).end();
       return;
     }
+
     if (req.method === 'GET') {
       res.setHeader('Access-Control-Allow-Origin', '*');
       // Read reservations.json from repo
