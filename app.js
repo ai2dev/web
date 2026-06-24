@@ -136,19 +136,19 @@ async function addReservation(event) {
   closeModal();
 }
 
-function toggleAdminMode() {
+async function toggleAdminMode() {
   if (isAdmin) {
     // 관리자 모드 종료 → 사용자 모드
     isAdmin = false;
     document.getElementById('adminToggleBtn').textContent = '관리자 모드';
-    renderTable();
+    await renderTable();
   } else {
     const pwd = prompt('관리자 비밀번호를 입력하세요');
     if (pwd === ADMIN_PASSWORD) {
       isAdmin = true;
       document.getElementById('adminToggleBtn').textContent = '사용자 모드';
       alert('관리자 모드가 활성화되었습니다.');
-      renderTable();
+      await renderTable();
     } else {
       alert('비밀번호가 틀렸습니다.');
     }
