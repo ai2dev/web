@@ -26,9 +26,18 @@ async function ghRequest(path, options = {}) {
   return resp.json();
 }
 
-module.exports = async (req, res) => {
+
   try {
+    // CORS preflight handling
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+      res.status(200).end();
+      return;
+    }
     if (req.method === 'GET') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
       // Read reservations.json from repo
       const path = `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/reservations.json?ref=${GITHUB_BRANCH}`;
       const data = await ghRequest(path);
@@ -38,6 +47,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
       // Expect full reservations array in body
       const reservations = req.body; // Vercel parses JSON automatically
       if (!Array.isArray(reservations)) {
@@ -71,6 +81,7 @@ module.exports = async (req, res) => {
 
     // Unsupported method
     res.setHeader('Allow', ['GET', 'POST']);
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (err) {
     console.error(err);
