@@ -5,7 +5,7 @@
 // status: 'pending' (신청), 'approved', 'rejected'
 
 // 초기 데이터 로드 및 현재 달 표시
-const STORAGE_KEY = 'roomReservations';
+const STORAGE_KEY = window.location.origin + '_roomReservations'; // 도메인 기반 키, GitHub Pages 등 동일 도메인에서 공유
 const ADMIN_PASSWORD = 'adm1960';
 let isAdmin = false;
 
