@@ -32,10 +32,6 @@ async function apiSaveReservations(reservations) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(reservations),
   });
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(reservations),
-  });
   if (!resp.ok) throw new Error('예약 저장 실패');
   return await resp.json(); // 커밋 결과 (필요 시 사용)
 }
