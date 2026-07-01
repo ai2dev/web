@@ -110,11 +110,20 @@ function attachListEvents() {
 
 // ---------- 초기화 ----------
 window.addEventListener('load', async () => {
-  // 카카오 지도 SDK가 완전히 로드될 때까지 대기
-  kakao.maps.load(async () => {
-    // SDK 로드 후 지도와 데이터 초기화
-    initMap();
-    await loadRestaurants();
+  // 카카오 지도 SDK가 준비될 때까지 안전하게 대기
+  const waitForKakao = (cb) => {
+    if (window.kakao && window.kakao.maps && typeof window.kakao.maps.load === 'function') {
+      cb();
+    } else {
+      setTimeout(() => waitForKakao(cb), 100);
+    }
+  };
+
+  waitForKakao(() => {
+    kakao.maps.load(async () => {
+      // SDK 로드 후 지도와 데이터 초기화
+      initMap();
+      await loadRestaurants();
 
     // ---------- 검색 버튼 이벤트 ----------
     const searchBtn = document.getElementById('search-btn');
@@ -153,4 +162,5 @@ window.addEventListener('load', async () => {
       // 비밀번호를 못 받으면 무시
     }
   });
+});
 });
