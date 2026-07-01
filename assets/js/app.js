@@ -6,7 +6,6 @@ import { saveBookmarksSecure, loadBookmarksSecure } from './bookmark.js';
 // ---------- 지도 초기화 (카카오) ----------
 let map;
 export function initMap() {
-  // 오산시 중심 좌표 (위도, 경도)
   const center = new kakao.maps.LatLng(37.267, 127.020);
   map = new kakao.maps.Map(document.getElementById('map'), {
     center,
@@ -29,7 +28,6 @@ export async function loadRestaurants() {
 
 // ---------- 리스트 및 마커 ----------
 function normalizePlace(item) {
-  // 카카오 장소와 기존 레스토랑 데이터를 통합하는 정규화 함수
   return {
     id: item.id ?? item.place_id ?? `${item.x}_${item.y}`,
     name: item.name ?? item.place_name ?? '알 수 없음',
@@ -39,7 +37,6 @@ function normalizePlace(item) {
 }
 
 function renderList(list) {
-  // 입력 리스트를 통일된 형태로 변환
   const normalized = list.map(normalizePlace);
   const listEl = document.getElementById('list');
   listEl.innerHTML = '';
@@ -57,7 +54,6 @@ function renderList(list) {
 }
 
 function addMarkers(list) {
-  // 기존 마커 제거
   if (window._markers) window._markers.forEach(m => m.setMap(null));
   window._markers = [];
   const normalized = list.map(normalizePlace);
@@ -114,36 +110,47 @@ function attachListEvents() {
 
 // ---------- 초기화 ----------
 window.addEventListener('load', async () => {
-  if (window.kakao && window.kakao.maps) {
+  // 카카오 지도 SDK가 완전히 로드될 때까지 대기
+  kakao.maps.load(async () => {
+    // SDK 로드 후 지도와 데이터 초기화
     initMap();
     await loadRestaurants();
 
-    // 검색 버튼 이벤트 바인딩
+    // ---------- 검색 버튼 이벤트 ----------
     const searchBtn = document.getElementById('search-btn');
     const keywordInput = document.getElementById('location-input');
-    searchBtn.addEventListener('click', () => {
+
+    searchBtn.addEventListener('click', async () => {
       const keyword = keywordInput.value.trim();
-      if (!keyword) return alert('검색어를 입력하세요.');
+      if (!keyword) {
+        alert('검색어를 입력하세요.');
+        return;
+      }
       const ps = new kakao.maps.services.Places();
+      const center = map.getCenter();
+      console.log('🔎 현재 지도 중심 좌표:', center);
+      const options = { location: center, radius: 5000 };
+
       ps.keywordSearch(keyword, (result, status) => {
+        console.log('🔎 검색 콜백 결과', result, 'status', status);
         if (status === kakao.maps.services.Status.OK) {
           renderList(result);
           addMarkers(result);
         } else {
-          alert('검색 결과가 없습니다.');
+          alert('검색 결과가 없습니다. (status: ' + status + ')');
         }
-      });
+      }, options);
     });
 
-    // 저장된 북마크를 UI에 반영
+    // ---------- 북마크 UI 복구 ----------
     try {
       const saved = await loadBookmarksSecure();
       saved.forEach(b => {
         const btn = document.querySelector(`.bookmark-btn[data-id="${b.id}"]`);
         if (btn) btn.textContent = '★';
       });
-    } catch (_) { /* 비밀번호를 못 받으면 무시 */ }
-  } else {
-    console.error('카카오 지도 API가 로드되지 않았습니다.');
-  }
+    } catch (_) {
+      // 비밀번호를 못 받으면 무시
+    }
+  });
 });
