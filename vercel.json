@@ -1,3 +1,0 @@
-{
-  "rewrites": [{ "source": "/api/reservations", "destination": "/api/reservations.js" }]
-}
