@@ -28,10 +28,22 @@ export async function loadRestaurants() {
 }
 
 // ---------- 리스트 및 마커 ----------
+function normalizePlace(item) {
+  // 카카오 장소와 기존 레스토랑 데이터를 통합하는 정규화 함수
+  return {
+    id: item.id ?? item.place_id ?? `${item.x}_${item.y}`,
+    name: item.name ?? item.place_name ?? '알 수 없음',
+    lat: item.lat ?? item.y,
+    lng: item.lng ?? item.x
+  };
+}
+
 function renderList(list) {
+  // 입력 리스트를 통일된 형태로 변환
+  const normalized = list.map(normalizePlace);
   const listEl = document.getElementById('list');
   listEl.innerHTML = '';
-  list.forEach(r => {
+  normalized.forEach(r => {
     const div = document.createElement('div');
     div.className = 'restaurant-item';
     div.innerHTML = `
@@ -48,13 +60,10 @@ function addMarkers(list) {
   // 기존 마커 제거
   if (window._markers) window._markers.forEach(m => m.setMap(null));
   window._markers = [];
-  const ps = new kakao.maps.services.Places(); // 필요 시 장소 검색 서비스 사용 가능
-  list.forEach(r => {
+  const normalized = list.map(normalizePlace);
+  normalized.forEach(r => {
     const position = new kakao.maps.LatLng(r.lat, r.lng);
-    const marker = new kakao.maps.Marker({
-      position,
-      map
-    });
+    const marker = new kakao.maps.Marker({ position, map });
     const infowindow = new kakao.maps.InfoWindow({
       content: `<div style="padding:5px;">${r.name}</div>`
     });
