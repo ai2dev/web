@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renault Zoe Ph2 차량 상태(BCM) & 주행거리 - Web Bluetooth</title>
+  <style>
+    /* ==========================================================================
+       스타일 시트 (CSS): 세련된 모던 다크(Modern Dark) 테마
+       자동차 진단 콘솔 스타일의 딥 슬레이트 블랙 및 일렉트릭 네온 하이라이트
+       ========================================================================== */
+    :root {
+      --bg-color: #0b0f19;          /* 메인 배경: 딥 네이비 블랙 */
+      --card-bg: #151d2f;           /* 카드 배경: 다크 슬레이트 */
+      --card-inner: #0d1321;        /* 내부 박스 배경 */
+      --text-main: #f8fafc;         /* 기본 텍스트: 밝은 화이트 */
+      --text-muted: #94a3b8;        /* 보조 텍스트: 차분한 그레이 */
+      --primary: #38bdf8;           /* 주 포인트: 일렉트릭 사이언 블루 */
+      --primary-hover: #0ea5e9;     /* 버튼 호버 시 */
+      --primary-glow: rgba(56, 189, 248, 0.25);
+      --success: #4ade80;           /* 성공 / 연결됨 / READY 녹색 */
+      --danger: #f87171;            /* 위험 / 해제 붉은색 */
+      --warning: #fbbf24;           /* 대기 / 진행 중 황색 */
+      --border: #243049;            /* 테두리 경계선 */
+      --terminal-bg: #070a10;       /* 터미널 배경: 딥 블랙 */
+      --terminal-text: #e2e8f0;     /* 터미널 기본 글자 */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 20px 16px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* 상단 헤더 */
+    header {
+      text-align: center;
+      padding: 16px 0 8px 0;
+    }
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    header h1 span.badge-logo {
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #0b0f19;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 800;
+      vertical-align: middle;
+    }
+    header p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+    }
+
+    /* 카드 스타일 */
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+    .card:hover {
+      border-color: #3b4d6e;
+    }
+    .card h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-main);
+    }
+
+    /* 버튼 스타일 */
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 11px 18px;
+      border: none;
+      border-radius: 9px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #b91c1c, #dc2626);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: linear-gradient(135deg, #991b1b, #b91c1c);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background-color: var(--card-inner);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background-color: #1a243a;
+      border-color: #475569;
+    }
+
+    /* 연결 상태 배지 */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .badge-disconnected {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .badge-disconnected::before {
+      background-color: var(--danger);
+    }
+
+    .badge-connecting {
+      background-color: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-connecting::before {
+      background-color: var(--warning);
+      animation: pulse 1s infinite;
+    }
+
+    .badge-connected {
+      background-color: rgba(74, 222, 128, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+    .badge-connected::before {
+      background-color: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* 진단 정보 표시 대시보드 */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 520px) {
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .metric-box {
+      background: radial-gradient(circle at top left, #1a253c, var(--card-inner));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 14px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .metric-box::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    }
+
+    .metric-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    /* 차량 상태(VEHICLE_STATE) 텍스트 스타일 */
+    .state-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #94a3b8;
+      letter-spacing: -0.3px;
+      transition: all 0.3s ease;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+    /* READY 상태일 때의 특별 발광 스타일 */
+    .state-ready {
+      color: #4ade80 !important;
+      text-shadow: 0 0 16px rgba(74, 222, 128, 0.4);
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+    /* IGNITION ON(+APC) 상태일 때 스타일 */
+    .state-ignition {
+      color: #fbbf24 !important;
+      text-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    /* 주행거리 숫자 스타일 */
+    .odo-value {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: #38bdf8;
+      text-shadow: 0 0 16px var(--primary-glow);
+      font-variant-numeric: tabular-nums;
+      font-family: "Courier New", Courier, monospace, sans-serif;
+    }
+    .metric-unit {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-left: 4px;
+      text-shadow: none;
+    }
+    .metric-desc {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    /* 실시간 통신 터미널 콘솔 */
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .terminal {
+      background-color: var(--terminal-bg);
+      color: var(--terminal-text);
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.84rem;
+      line-height: 1.6;
+      padding: 14px;
+      border-radius: 10px;
+      height: 230px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+    }
+    .terminal::-webkit-scrollbar { width: 8px; }
+    .terminal::-webkit-scrollbar-track { background: var(--terminal-bg); }
+    .terminal::-webkit-scrollbar-thumb { background: #243049; border-radius: 4px; }
+    .terminal::-webkit-scrollbar-thumb:hover { background: #3b4d6e; }
+
+    .log-tx { color: #4ade80; } /* 송신: 형광 그린 */
+    .log-rx { color: #38bdf8; } /* 수신: 일렉트릭 블루 */
+    .log-info { color: #facc15; } /* 안내: 레몬 옐로우 */
+    .log-err { color: #f87171; } /* 에러: 코랄 레드 */
+
+    /* 도움말 섹션 */
+    .help-box {
+      background: rgba(30, 41, 59, 0.6);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 10px 10px 0;
+      padding: 14px 18px;
+      font-size: 0.86rem;
+      color: #cbd5e1;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .help-box strong { color: var(--primary); }
+    .help-box ul {
+      margin-left: 20px;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .help-box code {
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 1. 상단 헤더 -->
+  <header>
+    <h1>
+      🚗 Zoe Ph2 Status Monitor
+      <span class="badge-logo">BCM & EVC</span>
+    </h1>
+    <p>Renault Zoe Phase 2 (ZE50) 차량 전원 상태 및 주행거리 실시간 진단</p>
+  </header>
+
+  <!-- 2. 장치 연결 카드 -->
+  <div class="card">
+    <h2>
+      <span>1. OBD2 BLE 동글 연결</span>
+      <span id="connectionBadge" class="badge badge-disconnected">연결 안 됨</span>
+    </h2>
+    <p id="deviceInfo" style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px;">
+      BLE 동글(Vgate iCar Pro, vLinker MC+ 등)을 차량 OBD 단자에 꽂고 전원을 켜주세요.
+    </p>
+    <div class="btn-group">
+      <button id="btnConnect" class="btn-primary" onclick="handleConnect()">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg>
+        블루투스 연결
+      </button>
+      <button id="btnDisconnect" class="btn-danger" onclick="handleDisconnect()" disabled>연결 해제</button>
+    </div>
+  </div>
+
+  <!-- 3. 실시간 진단 데이터 카드 (BCM VEHICLE_STATE + EVC ODOMETER) -->
+  <div class="card">
+    <h2>2. 차량 상태 및 누적 주행거리</h2>
+
+    <div class="metric-grid">
+      <!-- 1) UCH (BCM) 차량 전원/운행 상태 (DID 0x8003) -->
+      <div class="metric-box">
+        <div class="metric-title">차량 전원/운행 상태 (BCM)</div>
+        <div id="vehicleStateValue" class="state-value">—</div>
+        <div id="vehicleStateDesc" class="metric-desc">UCH DID 0x8003 (Service 0x22)</div>
+      </div>
+
+      <!-- 2) EVC 차량 실제 누적 주행거리 (DID 0x2006) -->
+      <div class="metric-box">
+        <div class="metric-title">차량 실제 주행거리 (EVC)</div>
+        <div>
+          <span id="evcOdoValue" class="odo-value">—</span><span class="metric-unit">km</span>
+        </div>
+        <div class="metric-desc">EVC 모듈 DID 0x2006 (29-bit CAN)</div>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button id="btnReadData" class="btn-primary" onclick="handleReadVehicleData()" disabled>
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+        차량 데이터 읽기
+      </button>
+      <button id="btnClearData" class="btn-secondary" onclick="handleClearDisplay()">화면 지우기</button>
+    </div>
+  </div>
+
+  <!-- 4. 실시간 통신 터미널 로그 -->
+  <div class="card">
+    <div class="terminal-header">
+      <h2 style="margin-bottom:0;">3. UDS 진단 통신 모니터</h2>
+      <button class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="clearLogs()">로그 지우기</button>
+    </div>
+    <div id="terminalConsole" class="terminal"></div>
+  </div>
+
+  <!-- 5. 환경 가이드 안내문 -->
+  <div class="help-box">
+    <strong>💡 BCM 상태값(VEHICLE_STATE) 안내:</strong>
+    <ul>
+      <li><strong>0 (VS_SLEEPING):</strong> 차량 수면/슬립 모드 (절전 상태)</li>
+      <li><strong>3 (VS_AUTOACC_LEVEL):</strong> ACC 전원 단계 (오디오/액세서리 작동)</li>
+      <li><strong>5 (VS_IGNITION_LEVEL):</strong> 점화 ON (+APC) (브레이크를 밟지 않고 START 버튼 1회 터치, 계기판 켜짐, READY 아님)</li>
+      <li><strong>7 (VS_ENGINE_RUNNING):</strong> ★ <strong>전기차의 "READY" 상태!</strong> (초록색 READY 램프 점등, 모터 고전압 투입 완료, 주행 가능)</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   1. BLE 통신 계층 (BleTransport)
+   Web Bluetooth API를 이용해 스마트폰/PC와 BLE OBD2 동글 간에 문자열을 송수신합니다.
+   ========================================================================== */
+
+// 시중에 출시된 주요 OBD2 BLE 동글들의 표준/커스텀 서비스 UUID 목록
+const BLE_CANDIDATE_SERVICES = [
+  '0000fff0-0000-1000-8000-00805f9b34fb', // 가장 흔한 ELM327 BLE 복제품 (fff1/fff2)
+  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 모듈 계열 (ffe1)
+  '0000ffe5-0000-1000-8000-00805f9b34fb', // HM-16/17 계열
+  '0000ffb0-0000-1000-8000-00805f9b34fb', // OBDBLE 계열
+  '000018f0-0000-1000-8000-00805f9b34fb', // Viecar / iCar 스타일
+  '0000abf0-0000-1000-8000-00805f9b34fb', // vLinker 일부 펌웨어
+  '0000ae00-0000-1000-8000-00805f9b34fb', // 범용 BLE 시리얼
+  '0000ff00-0000-1000-8000-00805f9b34fb', // 기타 클론
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART Service (NUS)
+  'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Vgate iCar Pro BLE 전용 서비스
+];
+
+class BleTransport {
+  constructor() {
+    this.device = null;             // 블루투스 장치 객체
+    this._writeChar = null;         // 데이터 전송 특성 (Characteristic)
+    this._writeWithResponse = false;// 전송 시 응답 대기 여부
+    this.onData = null;             // 데이터 수신 시 호출될 콜백 함수 (chunk => {})
+    this.name = '';                 // 연결된 장치 이름
+  }
+
+  // Web Bluetooth 지원 여부 확인
+  static isAvailable() {
+    return 'bluetooth' in navigator;
+  }
+
+  // BLE 장치 검색 및 연결
+  async connect() {
+    if (!BleTransport.isAvailable()) {
+      throw new Error('현재 브라우저가 Web Bluetooth를 지원하지 않습니다. Chrome 또는 Edge를 사용해 주세요.');
+    }
+
+    // 1단계: 주변의 블루투스 장치 검색 창 열기
+    try {
+      this.device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: BLE_CANDIDATE_SERVICES,
+      });
+    } catch (err) {
+      const filters = [
+        ...['IOS-Vlink', 'vLink', 'V-LINK', 'VLink', 'OBD', 'ELM', 'iCar', 'IOS-', 'KONNWEI', 'Veepeak', 'VEEPEAK']
+          .map(namePrefix => ({ namePrefix })),
+        ...BLE_CANDIDATE_SERVICES.map(s => ({ services: [s] })),
+      ];
+      this.device = await navigator.bluetooth.requestDevice({
+        filters,
+        optionalServices: BLE_CANDIDATE_SERVICES
+      });
+    }
+
+    this.name = this.device.name || this.device.id;
+
+    // 장치 연결 해제 감지
+    this.device.addEventListener('gattserverdisconnected', () => {
+      appendLog('info', '블루투스 연결이 끊어졌습니다.');
+      updateUiState(false);
+    });
+
+    // 2단계: GATT 서버 연결
+    const server = await this.device.gatt.connect();
+
+    // 3단계: 기본 서비스 목록 탐색
+    let services = [];
+    try {
+      services = await server.getPrimaryServices();
+    } catch (e) {
+      throw new Error('GATT 기본 서비스 목록을 가져오지 못했습니다: ' + e.message);
+    }
+
+    // 4단계: Notify(수신) 및 Write(송신) 특성 쌍 탐색
+    for (const svc of services) {
+      let chars = [];
+      try {
+        chars = await svc.getCharacteristics();
+      } catch (e) {
+        continue;
+      }
+
+      const notifyChar = chars.find(c => c.properties.notify || c.properties.indicate);
+      const writeChar = chars.find(c => c.properties.writeWithoutResponse || c.properties.write);
+
+      if (notifyChar && writeChar) {
+        await notifyChar.startNotifications();
+        const decoder = new TextDecoder();
+        notifyChar.addEventListener('characteristicvaluechanged', (event) => {
+          const value = decoder.decode(event.target.value);
+          if (this.onData) this.onData(value);
+        });
+
+        this._writeChar = writeChar;
+        this._writeWithResponse = !writeChar.properties.writeWithoutResponse;
+        return; // 연결 완료
+      }
+    }
+
+    this.device.gatt.disconnect();
+    throw new Error('호환되는 직렬(Serial/UART) GATT 서비스를 찾지 못했습니다. 일반 BLE OBD2 동글인지 확인해 주세요.');
+  }
+
+  // 동글로 문자열 전송 (20바이트 분할 처리)
+  async write(str) {
+    if (!this._writeChar) throw new Error('블루투스가 연결되어 있지 않습니다.');
+    const data = new TextEncoder().encode(str);
+
+    for (let i = 0; i < data.length; i += 20) {
+      const chunk = data.slice(i, i + 20);
+      if (!this._writeWithResponse && this._writeChar.writeValueWithoutResponse) {
+        await this._writeChar.writeValueWithoutResponse(chunk);
+      } else {
+        await this._writeChar.writeValue(chunk);
+      }
+    }
+  }
+
+  // 연결 종료
+  async disconnect() {
+    try {
+      if (this.device && this.device.gatt.connected) {
+        this.device.gatt.disconnect();
+      }
+    } catch (e) {
+      console.warn('연결 해제 중 오류:', e);
+    }
+    this.device = null;
+    this._writeChar = null;
+  }
+}
+
+
+/* ==========================================================================
+   2. ELM327 드라이버 계층 (Elm327Driver)
+   AT 커맨드로 ELM327을 초기화하고 ISO-TP/UDS 통신을 처리합니다.
+   ========================================================================== */
+
+class Elm327Driver {
+  constructor(transport) {
+    this.transport = transport;
+    this._buffer = '';          // 수신 문자열 버퍼
+    this._waiter = null;          // 현재 대기 중인 응답 핸들러
+    this._lastFromId = '';        // 마지막으로 설정한 수신 CAN ID
+    this.initialized = false;
+
+    this.transport.onData = (chunk) => {
+      this._buffer += chunk;
+      if (this._waiter && this._waiter.test(this._buffer)) {
+        const waiter = this._waiter;
+        this._waiter = null;
+        waiter.resolve(this._takeBuffer());
+      }
+    };
+  }
+
+  _takeBuffer() {
+    const data = this._buffer;
+    this._buffer = '';
+    return data;
+  }
+
+  send(cmd, { timeout = 3000, test = b => b.includes('>') } = {}) {
+    return new Promise((resolve, reject) => {
+      if (this._waiter) {
+        this._waiter.reject(new Error('이전 명령어 대기 중 새 명령어가 요청되었습니다.'));
+        this._waiter = null;
+      }
+
+      this._buffer = '';
+      const timer = setTimeout(() => {
+        if (this._waiter) {
+          const timeoutData = this._takeBuffer();
+          this._waiter = null;
+          resolve(timeoutData);
+        }
+      }, timeout);
+
+      this._waiter = {
+        test,
+        resolve: (val) => {
+          clearTimeout(timer);
+          if (val.trim()) appendLog('rx', val.trim());
+          resolve(val);
+        },
+        reject: (err) => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      };
+
+      if (cmd !== null) {
+        appendLog('tx', cmd);
+        this.transport.write(cmd + '\r').catch(err => {
+          clearTimeout(timer);
+          if (this._waiter) this._waiter = null;
+          reject(err);
+        });
+      }
+    });
+  }
+
+  async _drain(ms = 300) {
+    try { await this.transport.write('\r'); } catch (_) {}
+    await new Promise(r => setTimeout(r, ms));
+    this._buffer = '';
+  }
+
+  async _cmdOk(cmd) {
+    const res = await this.send(cmd);
+    if (res.toUpperCase().includes('OK') || res.includes('>')) return res;
+    await this._drain();
+    return res;
+  }
+
+  // ELM327 동글 초기화 시퀀스
+  async initDongle(statusCallback = () => {}) {
+    this.initialized = false;
+    this._lastFromId = '';
+
+    statusCallback('동글 통신 채널 활성화 중...');
+    await this._drain(400);
+
+    statusCallback('동글 리셋(ATWS)...');
+    await this.send('atws', { timeout: 3500 });
+    await this._drain(200);
+
+    const initCmds = [
+      { cmd: 'ate0', desc: '에코 끄기' },
+      { cmd: 'ats0', desc: '공백 출력 제거' },
+      { cmd: 'ath0', desc: 'CAN 헤더 비활성화' },
+      { cmd: 'atl0', desc: '줄바꿈 제거' },
+      { cmd: 'atal', desc: '긴 프레임 허용' },
+      { cmd: 'atcaf0', desc: 'CAN 자동 포맷 끄기 (수동 제어)' },
+      { cmd: 'atfcsh77b', desc: '흐름 제어 기본 헤더 설정' },
+      { cmd: 'atfcsd300000', desc: '흐름 제어 기본 데이터 설정' },
+      { cmd: 'atfcsm1', desc: '흐름 제어 모드 설정' },
+      { cmd: 'atsp6', desc: 'CAN 프로토콜 11-bit 500k 선택' },
+    ];
+
+    for (const item of initCmds) {
+      statusCallback(`초기화: ${item.cmd} (${item.desc})`);
+      await this._cmdOk(item.cmd);
+    }
+
+    this.initialized = true;
+    statusCallback('동글 초기화 완료! 차량 진단 준비됨');
+  }
+
+  // UDS 진단 질의 전송 함수 (11-bit / 29-bit 자동 전환)
+  async requestUds({ txId, rxId, isExtended = false, payloadHex, timeout = 3500 }) {
+    if (!this.initialized) throw new Error('동글이 초기화되지 않았습니다.');
+    payloadHex = payloadHex.toLowerCase().replace(/\s+/g, '');
+
+    // 1단계: CAN ID 및 필터 주소 설정
+    if (this._lastFromId !== rxId) {
+      if (isExtended) {
+        // 29비트 확장 CAN ID 설정 (예: EVC)
+        await this._cmdOk('atsp7');
+        await this._cmdOk('atcp' + txId.substring(0, 2));
+        await this._cmdOk('atsh' + txId.substring(2));
+      } else {
+        // 11비트 표준 CAN ID 설정 (예: UCH/BCM)
+        await this._cmdOk('atsp6');
+        await this._cmdOk('atsh' + txId);
+      }
+      await this._cmdOk('atcra' + rxId);   // 수신 필터 주소 설정
+      await this._cmdOk('atfcsh' + txId);  // 흐름 제어 응답 헤더 설정
+      this._lastFromId = rxId;
+    }
+
+    // 2단계: ISO-TP 프레임 생성 및 전송
+    const byteLen = payloadHex.length / 2;
+    let resp;
+    if (payloadHex.length <= 14) {
+      // Single Frame: 0x0[길이][데이터]
+      const singleFrame = '0' + byteLen.toString(16) + payloadHex;
+      resp = await this.send(singleFrame, { timeout });
+    } else {
+      // First Frame: 1[12비트 길이][앞 12글자 데이터]
+      const firstFrame = '1' + byteLen.toString(16).padStart(3, '0') + payloadHex.substring(0, 12);
+      let flow = await this.send(firstFrame, { timeout, test: b => /[\r\n>]/.test(b) });
+
+      let idx = 12;
+      let seq = 1;
+      while (idx < payloadHex.length) {
+        const chunk = '2' + (seq & 0xf).toString(16) + payloadHex.substring(idx, idx + 14);
+        if (flow.trim().startsWith('3000')) {
+          resp = await this.send(chunk, { timeout });
+        } else if (flow.trim().startsWith('30')) {
+          flow = await this.send(chunk, { timeout, test: b => /[\r\n>]/.test(b) });
+          resp = flow;
+        } else {
+          throw new Error('ISO-TP Flow Control 에러: ' + flow.trim());
+        }
+        idx += 14;
+        seq++;
+      }
+    }
+
+    // 3단계: 응답 조립 및 반환
+    return this._assembleResponse(resp, timeout);
+  }
+
+  async _assembleResponse(respText, timeout) {
+    const clean = s => s.trim().replace(/\s/g, '').toLowerCase();
+    let lines = respText.split(/[\r\n]+/).map(clean).filter(l => l && l !== '>' && !/^ok$/i.test(l));
+
+    if (lines.some(l => l.includes('canerror') || l.includes('nodata') || l.includes('error'))) {
+      throw new Error('차량 통신 오류 (CAN ERROR 또는 NO DATA - 차량 전원이 켜져 있는지 확인하세요)');
+    }
+
+    let first = lines.find(l => /^[01][0-9a-f]/.test(l));
+    if (!first) {
+      const more = await this.send(null, { timeout });
+      lines = lines.concat(more.split(/[\r\n]+/).map(clean).filter(l => l && l !== '>'));
+      first = lines.find(l => /^[01][0-9a-f]/.test(l));
+    }
+
+    if (!first) throw new Error('응답 데이터를 찾을 수 없습니다: ' + respText.trim());
+
+    let payload = '';
+    let expectedBytes = 0;
+
+    if (first[0] === '0') {
+      expectedBytes = parseInt(first[1], 16);
+      payload = first.substring(2, 2 + expectedBytes * 2);
+    } else {
+      expectedBytes = parseInt(first.substring(1, 4), 16);
+      payload = first.substring(4);
+      for (const l of lines) {
+        if (l === first || !/^2[0-9a-f]/.test(l)) continue;
+        payload += l.substring(2);
+      }
+      payload = payload.substring(0, expectedBytes * 2);
+    }
+
+    if (payload.startsWith('7f')) {
+      const nrc = payload.substring(4, 6);
+      throw new Error(`ECU 요청 거부됨 (UDS NRC: 0x${nrc})`);
+    }
+
+    return payload;
+  }
+}
+
+
+/* ==========================================================================
+   3. Zoe Ph2 진단 로직: UCH(BCM) VEHICLE_STATE & EVC ODOMETER
+   ========================================================================== */
+
+// VEHICLE_STATE (DID 0x8003) 코드 사전 정의
+const VEHICLE_STATES = {
+  0:  { code: 'VS_SLEEPING',             name: 'SLEEP (수면)',          desc: '차량 수면 모드 (절전 상태)',            type: 'sleep' },
+  1:  { code: 'VS_TECHNICAL_WAKE_UP',    name: 'WAKE UP (기동)',        desc: '통신 활성화 (ECU 깨어남)',             type: 'info' },
+  2:  { code: 'VS_CUT_OFF_PENDING',      name: 'CUT OFF PENDING',       desc: '전원 차단 대기 상태',                   type: 'warn' },
+  3:  { code: 'VS_AUTOACC_LEVEL',        name: 'AUTO ACC (액세서리)',   desc: 'ACC 전원 단계 (오디오/내비 작동)',       type: 'info' },
+  4:  { code: 'VS_NOT_USED_4',           name: 'NOT USED (4)',          desc: '미사용 정의 단계',                      type: 'normal' },
+  5:  { code: 'VS_IGNITION_LEVEL',       name: 'IGNITION ON (+APC)',    desc: '점화 ON (START 1회 터치, READY 아님)',   type: 'ignition' },
+  6:  { code: 'VS_STARTING_IN_PROGRESS', name: 'STARTING IN PROGRESS',   desc: '시동 / 고전압 투입 시퀀스 진행 중',      type: 'warn' },
+  7:  { code: 'VS_ENGINE_RUNNING',       name: '⚡ READY (주행 가능)',  desc: '★ 고전압 투입 완료, 주행 가능 상태',    type: 'ready' },
+  8:  { code: 'VS_AUTOSTART',            name: 'AUTOSTART',             desc: '자동 기동 단계',                        type: 'info' },
+  9:  { code: 'VS_ENGINE_SYSTEM_STOP',   name: 'SYSTEM STOP (정지)',    desc: '시스템 정지 상태',                      type: 'danger' },
+  10: { code: 'VS_NOT_USED_10',          name: 'NOT USED (10)',         desc: '미사용 정의 단계',                      type: 'normal' },
+  15: { code: 'VS_UNAVAILABLE',          name: 'UNAVAILABLE',          desc: '상태 정보 수신 불가',                   type: 'normal' }
+};
+
+let transport = null;
+let elmDriver = null;
+
+// [블루투스 연결] 버튼 핸들러
+async function handleConnect() {
+  const badge = document.getElementById('connectionBadge');
+  const btnConnect = document.getElementById('btnConnect');
+  const btnDisconnect = document.getElementById('btnDisconnect');
+  const btnReadData = document.getElementById('btnReadData');
+  const deviceInfo = document.getElementById('deviceInfo');
+
+  try {
+    badge.className = 'badge badge-connecting';
+    badge.textContent = '연결 중...';
+    appendLog('info', 'Web Bluetooth 장치 검색을 시작합니다...');
+
+    transport = new BleTransport();
+    await transport.connect();
+
+    deviceInfo.textContent = `연결된 동글: ${transport.name}`;
+    appendLog('info', `BLE 장치 연결 성공: ${transport.name}`);
+
+    elmDriver = new Elm327Driver(transport);
+    await elmDriver.initDongle((msg) => {
+      appendLog('info', msg);
+    });
+
+    updateUiState(true);
+    appendLog('info', '✨ 모든 준비가 완료되었습니다! "차량 데이터 읽기" 버튼을 누르세요.');
+  } catch (err) {
+    console.error('연결 실패:', err);
+    appendLog('err', '연결 실패: ' + err.message);
+    updateUiState(false);
+  }
+}
+
+// [연결 해제] 버튼 핸들러
+async function handleDisconnect() {
+  if (transport) {
+    appendLog('info', '연결을 해제합니다...');
+    await transport.disconnect();
+    transport = null;
+    elmDriver = null;
+  }
+  updateUiState(false);
+}
+
+// [차량 데이터 읽기] 버튼 핸들러
+async function handleReadVehicleData() {
+  if (!elmDriver) {
+    alert('먼저 블루투스 동글에 연결해 주세요.');
+    return;
+  }
+
+  const btnRead = document.getElementById('btnReadData');
+  btnRead.disabled = true;
+
+  try {
+    appendLog('info', '>>> Zoe Ph2 차량 데이터(BCM 상태 + EVC 주행거리) 읽기 시작...');
+
+    // ----------------------------------------------------
+    // 1. UCH (BCM, 바디 제어 모듈) - VEHICLE_STATE 읽기
+    // ----------------------------------------------------
+    // 담당 제어기: UCH (BCM)
+    // 진단 송신 CAN ID: 0x745 (차량으로 명령 송신)
+    // 진단 수신 CAN ID: 0x765 (차량 응답 수신)
+    // UDS 진단 명령어: 22 80 03 (서비스 0x22 + DID 0x8003)
+    // 기대 응답 형태: 62 80 03 [상태값 1바이트 Hex]
+    // ----------------------------------------------------
+    appendLog('info', '1) UCH (BCM, ID 0x745)에 DID 0x8003 (VEHICLE_STATE) 요청 중...');
+    const stateEl = document.getElementById('vehicleStateValue');
+    const stateDescEl = document.getElementById('vehicleStateDesc');
+
+    try {
+      const respPayloadBcm = await elmDriver.requestUds({
+        txId: '745',
+        rxId: '765',
+        isExtended: false,
+        payloadHex: '228003'
+      });
+
+      appendLog('info', `UCH(BCM) 원시 응답: ${respPayloadBcm}`);
+
+      if (respPayloadBcm.startsWith('628003') && respPayloadBcm.length >= 8) {
+        const stateHex = respPayloadBcm.substring(6, 8); // 628003 뒤의 2자리 hex (1바이트)
+        const stateVal = parseInt(stateHex, 16);
+        const stateInfo = VEHICLE_STATES[stateVal] || {
+          code: `UNKNOWN_${stateVal}`,
+          name: `알 수 없음 (0x${stateHex})`,
+          desc: `정의되지 않은 상태 코드 (${stateVal})`,
+          type: 'normal'
+        };
+
+        // UI 스타일 업데이트 (READY / IGNITION 등 시각 강조)
+        stateEl.className = 'state-value';
+        if (stateInfo.type === 'ready') {
+          stateEl.classList.add('state-ready');
+        } else if (stateInfo.type === 'ignition') {
+          stateEl.classList.add('state-ignition');
+        }
+
+        stateEl.textContent = stateInfo.name;
+        stateDescEl.textContent = `[코드: ${stateVal}] ${stateInfo.desc}`;
+        appendLog('info', `✅ 차량 상태 감지: [${stateVal}] ${stateInfo.name} - ${stateInfo.desc}`);
+      } else {
+        appendLog('err', 'UCH 응답 형식이 예상과 다릅니다: ' + respPayloadBcm);
+        stateEl.textContent = '파싱 실패';
+      }
+    } catch (e) {
+      appendLog('err', `UCH DID 0x8003 읽기 실패: ${e.message}`);
+      stateEl.textContent = '수신 실패';
+      stateDescEl.textContent = 'UCH 통신 에러 (차량 전원 상태 확인 필요)';
+    }
+
+    // ----------------------------------------------------
+    // 2. EVC (차량 제어 모듈) - 실제 누적 주행거리 읽기
+    // ----------------------------------------------------
+    // CAN 규격: 확장 29-bit CAN (송신 0x18DADAF1, 수신 0x18DAF1DA)
+    // UDS 서비스: 0x22 (ReadDataByIdentifier)
+    // DID: 0x2006 (Total vehicle distance)
+    // ----------------------------------------------------
+    appendLog('info', '2) 차량 제어기(EVC, ID 0x18DADAF1)에 DID 0x2006 (주행거리) 요청 중...');
+    let evcOdoKm = NaN;
+
+    try {
+      const respPayloadEvc = await elmDriver.requestUds({
+        txId: '18dadaf1',
+        rxId: '18daf1da',
+        isExtended: true,
+        payloadHex: '222006'
+      });
+
+      appendLog('info', `EVC 원시 응답: ${respPayloadEvc}`);
+
+      if (respPayloadEvc.startsWith('622006') && respPayloadEvc.length >= 12) {
+        const hexVal = respPayloadEvc.substring(6, 12); // 622006 뒤의 6자리 hex (3바이트)
+        evcOdoKm = parseInt(hexVal, 16);
+        appendLog('info', `✅ EVC 실제 주행거리 파싱 성공: ${evcOdoKm.toLocaleString()} km (Hex: 0x${hexVal})`);
+      } else {
+        appendLog('err', 'EVC 응답 형식이 예상과 다릅니다: ' + respPayloadEvc);
+      }
+    } catch (e) {
+      appendLog('err', `EVC DID 0x2006 읽기 실패: ${e.message}`);
+    }
+
+    document.getElementById('evcOdoValue').textContent =
+      Number.isNaN(evcOdoKm) ? '실패' : evcOdoKm.toLocaleString();
+
+    appendLog('info', '🏁 진단 데이터 조회가 완료되었습니다.');
+  } catch (err) {
+    appendLog('err', '작업 도중 오류 발생: ' + err.message);
+  } finally {
+    btnRead.disabled = false;
+  }
+}
+
+// 화면 값 초기화
+function handleClearDisplay() {
+  const stateEl = document.getElementById('vehicleStateValue');
+  stateEl.className = 'state-value';
+  stateEl.textContent = '—';
+  document.getElementById('vehicleStateDesc').textContent = 'UCH DID 0x8003 (Service 0x22)';
+  document.getElementById('evcOdoValue').textContent = '—';
+}
+
+// UI 상태 동기화
+function updateUiState(connected) {
+  const badge = document.getElementById('connectionBadge');
+  const btnConnect = document.getElementById('btnConnect');
+  const btnDisconnect = document.getElementById('btnDisconnect');
+  const btnReadData = document.getElementById('btnReadData');
+  const deviceInfo = document.getElementById('deviceInfo');
+
+  if (connected) {
+    badge.className = 'badge badge-connected';
+    badge.textContent = '연결됨';
+    btnConnect.disabled = true;
+    btnDisconnect.disabled = false;
+    btnReadData.disabled = false;
+  } else {
+    badge.className = 'badge badge-disconnected';
+    badge.textContent = '연결 안 됨';
+    btnConnect.disabled = false;
+    btnDisconnect.disabled = true;
+    btnReadData.disabled = true;
+    deviceInfo.textContent = 'BLE 동글(Vgate iCar Pro, vLinker MC+ 등)을 차량 OBD 단자에 꽂고 전원을 켜주세요.';
+    handleClearDisplay();
+  }
+}
+
+// 터미널 콘솔 로그 출력
+function appendLog(type, message) {
+  const consoleEl = document.getElementById('terminalConsole');
+  const time = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+
+  if (type === 'tx') {
+    line.className = 'log-tx';
+    line.textContent = `[${time}] TX ➔ ${message}`;
+  } else if (type === 'rx') {
+    line.className = 'log-rx';
+    line.textContent = `[${time}] RX ⬅ ${message}`;
+  } else if (type === 'err') {
+    line.className = 'log-err';
+    line.textContent = `[${time}] ❌ ${message}`;
+  } else {
+    line.className = 'log-info';
+    line.textContent = `[${time}] ℹ ${message}`;
+  }
+
+  consoleEl.appendChild(line);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function clearLogs() {
+  document.getElementById('terminalConsole').innerHTML = '';
+}
+</script>
+
+</body>
+</html>
